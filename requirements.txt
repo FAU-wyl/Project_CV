@@ -2,3 +2,6 @@ numpy
 scipy
 matplotlib
 streamlit
+
+# OpenCV: install package name is `opencv-python`; import in code as `cv2`
+opencv-python
