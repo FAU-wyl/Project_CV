@@ -2,7 +2,7 @@
 
 import numpy as np
 from scipy.ndimage import label, generate_binary_structure
-
+from scipy import ndimage
 
 def create_mask_from_indices(image_shape, rows, cols, selected_mask):
     """
@@ -112,6 +112,16 @@ def filter_floor_mask(mask, min_floor_size=100, max_hole_size=300):
     """
 
     cleaned = mask.astype(bool)
+
+    # 创建结构元素（圆形核）
+    kernel = ndimage.generate_binary_structure(2, 2)
+    kernel_size = 3
+
+    # Closing先，后Opening
+    dilated = ndimage.binary_dilation(cleaned, structure=kernel, iterations=kernel_size)
+    closed = ndimage.binary_erosion(dilated, structure=kernel, iterations=kernel_size)
+    eroded = ndimage.binary_erosion(closed, structure=kernel, iterations=kernel_size)
+    cleaned = ndimage.binary_dilation(eroded, structure=kernel, iterations=kernel_size)
 
     cleaned = remove_small_true_components(
         cleaned,

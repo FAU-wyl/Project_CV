@@ -2,6 +2,8 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.ndimage import label
+import cv2
 
 
 def normalize_display_range(image, lower_percentile=1, upper_percentile=99):
@@ -189,45 +191,38 @@ def show_final_result_3d(PC, floor_mask, box_top_mask, corners=None, step=4):
     plt.show()
 def get_rectangle_from_mask_pca(mask):
     """
-    使用 PCA 估计二值掩码的二维外接矩形。
-
     参数：
         mask: H x W 布尔掩码，True 表示箱顶区域
 
     返回：
         corners: 4 x 2 数组，每行是 [col, row]，可直接用于绘图
     """
+    # 1. 使用 ndimage.label 识别连通域
+    labeled_mask, num_features = label(mask)
 
-    rows, cols = np.where(mask)
+    # 2. 找到像素数量最多的区域（假设为盒子主体）
+    # bincount 计算每个 label 的像素数，[1:] 是为了排除背景 0
+    region_counts = np.bincount(labeled_mask.ravel())
+    main_label = np.argmax(region_counts[1:]) + 1
 
-    if len(rows) == 0:
-        raise ValueError("Mask is empty, cannot estimate rectangle.")
+    # 提取主体掩码
+    main_mask = (labeled_mask == main_label).astype(np.uint8)
+    # 2. 寻找轮廓 (Contours)
+    # 轮廓点包含了形状的所有边界信息
+    contours, _ = cv2.findContours(main_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        raise ValueError("No contours found.")
 
-    # Use image coordinates: x = col, y = row
-    points = np.column_stack([cols, rows]).astype(float)
+    # 获取最大的轮廓
+    cnt = max(contours, key=cv2.contourArea)
 
-    centroid = np.mean(points, axis=0)
-    centered = points - centroid
+    # 3. 计算最小外接矩形
+    # rect 结构为: ( (x, y), (w, h), angle )
+    rect = cv2.minAreaRect(cnt)
 
-    # PCA in 2D
-    _, _, vt = np.linalg.svd(centered, full_matrices=False)
-
-    dir1 = vt[0]
-    dir2 = vt[1]
-
-    proj1 = centered @ dir1
-    proj2 = centered @ dir2
-
-    min1, max1 = np.min(proj1), np.max(proj1)
-    min2, max2 = np.min(proj2), np.max(proj2)
-
-    corners = np.array([
-        centroid + min1 * dir1 + min2 * dir2,
-        centroid + max1 * dir1 + min2 * dir2,
-        centroid + max1 * dir1 + max2 * dir2,
-        centroid + min1 * dir1 + max2 * dir2,
-    ])
-
+    # 4. 获取四个角点坐标
+    box = cv2.boxPoints(rect)
+    corners = box.astype(np.int64)  # 转换为整数坐标 [col, row]
     return corners
 def show_final_result_2d(floor_mask, box_top_mask, title="Final Detection Result"):
     """
