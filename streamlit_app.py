@@ -16,7 +16,7 @@ from mask_utils import (
     largest_connected_component,
 )
 from ransac import ransac_plane
-from visualization import get_rectangle_from_mask_pca
+from visualization import get_rectangle_from_mask
 
 
 def load_from_mat_dict(data):
@@ -102,7 +102,7 @@ def draw_final_overlay(floor_mask, box_top_mask):
     result[floor_mask] = floor_color
     result[box_top_mask] = box_top_color
 
-    corners = get_rectangle_from_mask_pca(box_top_mask)
+    corners = get_rectangle_from_mask(box_top_mask)
     closed_corners = np.vstack([corners, corners[0]])
 
     top_point = corners[np.argmin(corners[:, 1])]

@@ -189,7 +189,7 @@ def show_final_result_3d(PC, floor_mask, box_top_mask, corners=None, step=4):
     ax.legend()
 
     plt.show()
-def get_rectangle_from_mask_pca(mask):
+def get_rectangle_from_mask(mask):
     """
     参数：
         mask: H x W 布尔掩码，True 表示箱顶区域
@@ -216,13 +216,32 @@ def get_rectangle_from_mask_pca(mask):
     # 获取最大的轮廓
     cnt = max(contours, key=cv2.contourArea)
 
-    # 3. 计算最小外接矩形
-    # rect 结构为: ( (x, y), (w, h), angle )
-    rect = cv2.minAreaRect(cnt)
+    # 1. 计算轮廓周长，作为逼近精度的基准
+    peri = cv2.arcLength(cnt, True)
 
-    # 4. 获取四个角点坐标
-    box = cv2.boxPoints(rect)
-    corners = box.astype(np.int64)  # 转换为整数坐标 [col, row]
+    # 2. 进行多边形逼近
+    # eps 越小，逼近越精细，顶点越多；eps 越大，形状越简化。
+    # 这里的 0.02 是一个常用的经验值（周长的 2%），你可以根据实际情况微调
+    eps = 0.02 * peri
+    approx = cv2.approxPolyDP(cnt, eps, True)
+
+    # 挤压维度，从 (N, 1, 2) 变为 (N, 2)
+    approx = approx.squeeze()
+
+    # 3. 如果不幸逼近出了超过 4 个点，需要筛选出最像四边形的 4 个角
+    if len(approx) > 4:
+        # 策略：寻找凸包，或者取面积最大的四边形组合。
+        # 这里使用凸包简化，然后取最偏离中心的四个点，或再次加大 eps 强行逼近
+        hull = cv2.convexHull(cnt).squeeze()
+        # 再次尝试用更粗的 eps 逼近凸包
+        approx = cv2.approxPolyDP(hull, 0.04 * cv2.arcLength(hull, True), True).squeeze()
+
+    # 4. 如果逼近结果仍不是 4 个点（可能是 3 个或 5+），作为兜底，回退到 minAreaRect
+    if len(approx) != 4:
+        rect = cv2.minAreaRect(cnt)
+        corners = cv2.boxPoints(rect)
+    else:
+        corners = approx.astype(np.float64)
     return corners
 def show_final_result_2d(floor_mask, box_top_mask, title="Final Detection Result"):
     """
@@ -261,7 +280,7 @@ def show_final_result_2d(floor_mask, box_top_mask, title="Final Detection Result
     result[box_top_mask] = box_top_color
 
     # Estimate rectangle from box top mask
-    corners = get_rectangle_from_mask_pca(box_top_mask)
+    corners = get_rectangle_from_mask(box_top_mask)
 
     # Close polygon
     closed_corners = np.vstack([corners, corners[0]])

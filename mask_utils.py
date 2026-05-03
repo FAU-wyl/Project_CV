@@ -115,9 +115,9 @@ def filter_floor_mask(mask, min_floor_size=100, max_hole_size=300):
 
     # 创建结构元素（圆形核）
     kernel = ndimage.generate_binary_structure(2, 2)
-    kernel_size = 3
+    kernel_size = 5
 
-    # Closing先，后Opening
+    # Closing first，Opening after
     dilated = ndimage.binary_dilation(cleaned, structure=kernel, iterations=kernel_size)
     closed = ndimage.binary_erosion(dilated, structure=kernel, iterations=kernel_size)
     eroded = ndimage.binary_erosion(closed, structure=kernel, iterations=kernel_size)
@@ -182,6 +182,8 @@ def largest_connected_component(mask):
     仅保留最大的 True 连通域。
 
     该函数用于提取箱顶的主要区域。
+    Scan a mask to group adjacent pixels into distinct labeled clusters
+    and then return the single cluster with the highest total pixel
     """
 
     structure = generate_binary_structure(2, 2)

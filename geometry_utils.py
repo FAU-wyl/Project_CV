@@ -89,7 +89,6 @@ def estimate_length_width_simple(PC, box_top_mask):
 
     return length, width
 
-
 def estimate_length_width_pca(PC, box_top_mask):
     """
     使用 PCA 估计箱顶长宽。
@@ -130,7 +129,6 @@ def estimate_length_width_pca(PC, box_top_mask):
 
     return length, width
 
-
 def estimate_box_dimensions(
     PC,
     floor_model,
@@ -158,9 +156,6 @@ def estimate_box_dimensions(
         length, width = estimate_length_width_pca(PC, box_top_mask)
     elif method == "simple":
         length, width = estimate_length_width_simple(PC, box_top_mask)
-    else:
-        raise ValueError(f"Unknown method: {method}. Use 'pca' or 'simple'.")
-
     return height, length, width
 
 
@@ -183,8 +178,8 @@ def get_box_top_corners_pca(PC, box_top_mask):
 
     _, _, vt = np.linalg.svd(centered, full_matrices=False)
 
-    dir1 = vt[0]
-    dir2 = vt[1]
+    dir1 = vt[0] # 长边方向向量
+    dir2 = vt[1] # 宽边方向向量
 
     proj1 = centered @ dir1
     proj2 = centered @ dir2
