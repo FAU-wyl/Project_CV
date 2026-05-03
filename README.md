@@ -1,44 +1,47 @@
-# 箱体检测与尺寸估计（传统视觉 + 点云）
+# Box Detection and Size Estimation (Classical Vision + Point Cloud)
 
-本项目基于 `.mat` 格式的深度相机数据（幅值图、距离图、点云）实现：
+This project processes depth camera data stored in MATLAB `.mat` files (intensity images, distance maps, and point clouds) to detect and estimate the sizes of rectangular boxes.
 
-- 地面平面检测（RANSAC）
-- 箱顶平面检测（RANSAC）
-- 箱体高/长/宽估计
-- 2D/3D 结果可视化
-- Streamlit 参数调节页面（浏览器交互调参）
-
----
-
-## 1. 项目结构
-
-- `main.py`：离线主流程脚本
-- `streamlit_app.py`：浏览器 UI（可选文件、可调参数、可视化结果）
-- `data_utils.py`：数据读取与有效点提取
-- `ransac.py`：平面拟合与 RANSAC
-- `mask_utils.py`：掩码构建与清理
-- `geometry_utils.py`：尺寸估计与角点估计
-- `visualization.py`：2D/3D 可视化函数
-- `DataRead.py`：批量检查 `.mat` 文件内容
-- `data/`：数据目录（放置 `.mat` 文件）
+Key features:
+- Ground plane detection (RANSAC)
+- Box-top plane detection (RANSAC)
+- Box height, length and width estimation
+- 2D/3D visualization of results
+- Streamlit-based UI for interactive parameter tuning
 
 ---
 
-## 2. 数据格式要求
+## 1. Project structure
 
-`.mat` 文件中需要包含以下字段（前缀匹配）：
-
-- `amplitudes*`：幅值图（2D）
-- `distances*`：距离图（2D）
-- `cloud*`：点云（`H x W x 3`）
-
-程序会自动提取这三类字段并校验形状一致性。
+- `main.py`: Offline processing pipeline
+- `streamlit_app.py`: Optional Streamlit UI for interactive parameter tuning and visualization
+- `data_utils.py`: Data loading and valid-point extraction
+- `ransac.py`: Plane fitting and RANSAC utilities
+- `mask_utils.py`: Mask construction and cleanup helpers
+- `geometry_utils.py`: Size estimation and corner detection functions
+- `visualization.py`: 2D/3D visualization routines
+- `DataRead.py`: Utilities to inspect `.mat` files in batch
+- `data/`: Directory for input `.mat` files
 
 ---
 
-## 3. 环境安装
+## 2. Expected data format
 
-建议 Python 3.10+。
+Each `.mat` file should include fields matching the following prefixes (the code extracts matching fields automatically):
+
+- `amplitudes*`: Intensity (amplitude) image (2D)
+- `distances*`: Distance/depth map (2D)
+- `cloud*`: Point cloud array with shape `H x W x 3`
+
+The package validates that the extracted arrays conform to expected shapes.
+
+---
+
+## 3. Environment and installation
+
+Recommended Python: 3.10 or newer.
+
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -46,57 +49,60 @@ pip install -r requirements.txt
 
 ---
 
-## 4. 运行方式
+## 4. How to run
 
-### 4.1 运行离线脚本
+### 4.1 Run the offline script
 
 ```bash
-python3 main.py
+python main.py
 ```
 
-该脚本默认读取 `data/example1kinect.mat`。
+By default this script loads `data/example1kinect.mat`.
 
-### 4.2 运行 Streamlit 调参界面
+### 4.2 Run the Streamlit interactive UI
 
 ```bash
 streamlit run streamlit_app.py
 ```
 
-在页面中可以：
-
-- 选择本地 `data/` 下的 `.mat` 文件，或上传 `.mat` 文件
-- 调整 RANSAC 和掩码清理参数
-- 查看尺寸估计和可视化结果
-
----
-
-## 5. 可调关键参数说明
-
-在 `streamlit_app.py` 页面中可调：
-
-- `Floor threshold`：地面平面内点距离阈值
-- `Box top threshold`：箱顶平面内点距离阈值
-- `Max iterations`：RANSAC 最大迭代次数
-- `Min floor component size`：地面最小连通域面积
-- `Max internal hole size`：地面内部可填充空洞上限
-- `Length/width estimation method`：长宽估计方法（`pca` / `simple`）
+From the web UI you can:
+- Choose a `.mat` file from the local `data/` folder or upload a file
+- Adjust RANSAC and mask-cleaning parameters
+- Inspect size estimation results and visualizations
 
 ---
 
-## 6. 结果说明
+## 5. Adjustable parameters
 
-最终可得到：
+The Streamlit UI exposes several parameters that control detection and post-processing. Typical tunables include:
 
-- 箱体高度（由地面平面和箱顶平面距离估计）
-- 箱体长宽（基于箱顶点云，默认 PCA）
-- 箱顶四角点（近似）
-- 2D 分割叠加图与方向标签（`top/bottom/left/right`）
+- `Floor threshold`: Distance threshold for inliers when fitting the ground plane
+- `Box top threshold`: Distance threshold for inliers when fitting the box top plane
+- `Max iterations`: Maximum RANSAC iterations
+- `Min floor component size`: Minimum connected-component area for the floor mask
+- `Max internal hole size`: Maximum hole size allowed when filling internal holes in the mask
+- `Length/width estimation method`: Method for length/width estimation (`pca` or `simple`)
+
+Adjusting these values helps adapt the pipeline to different data quality and box shapes.
 
 ---
 
-## 7. 常见问题
+## 6. Output
 
-- **报错 “No valid points”**：点云中 `z != 0` 的有效点不足。
-- **箱顶检测不稳定**：尝试调大 `Max iterations`，并微调两个阈值。
-- **地面掩码过碎**：适当增大 `Min floor component size`。
-- **箱体孔洞被误填**：适当减小 `Max internal hole size`。
+The pipeline produces:
+
+- Box height (distance between ground plane and box-top plane)
+- Box length and width (estimated from the top point cloud, PCA by default)
+- Approximate corner points of the box top
+- 2D segmentation overlays and oriented labels (`top`, `bottom`, `left`, `right`)
+
+---
+
+## 7. Troubleshooting and common issues
+
+- "No valid points": The point cloud contains too few valid points (e.g. most Z values are zero). Check the input `.mat` file.
+- Unstable box-top detection: Increase `Max iterations` and fine-tune the two RANSAC thresholds.
+- Fragmented floor mask: Increase `Min floor component size` to remove small components.
+- Incorrect hole filling: Reduce `Max internal hole size` to avoid filling real holes in the object.
+
+If you need reproducible environments, consider pinning package versions in `requirements.txt` (e.g. `opencv-python==4.7.0.72`).
