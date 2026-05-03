@@ -117,6 +117,7 @@ def main():
     # =========================
     # 8. RANSAC: find box top plane
     # =========================
+    # Using RANSAC again to get the plane of Box top
     box_model, box_inliers = ransac_plane(
         non_floor_points,
         threshold=BOX_THRESHOLD,
@@ -128,7 +129,7 @@ def main():
     print("d:", box_model[1])
 
     # =========================
-    # 9. Convert box top inliers to 2D mask
+    # 9. Convert box top inliers(1D) to 2D mask
     # =========================
     raw_box_mask = create_mask_from_indices(
         image_shape=PC.shape[:2],

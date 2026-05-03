@@ -67,13 +67,10 @@ def get_box_top_points(PC, box_top_mask):
 
 def estimate_length_width_simple(PC, box_top_mask):
     """
-    用 x/y 坐标范围估计箱体长宽（简化方法）。
+    Calculate the difference between the maximum of X and y and minimum of x and y directly。
 
-    适用场景：
-        箱体大致与 x/y 轴对齐。
-
-    局限：
-        若箱体有旋转，结果可能偏大。
+    disadvantage:
+        If the box is rotated, the result may be overestimated
     """
 
     points = get_box_top_points(PC, box_top_mask)
@@ -91,8 +88,9 @@ def estimate_length_width_simple(PC, box_top_mask):
 
 def estimate_length_width_pca(PC, box_top_mask):
     """
-    使用 PCA 估计箱顶长宽。
-
+    1. Use PCA to get the top 2 directions of the box_top_mask, One represents the width direction, and the other represents the length direction.
+    2. Project points onto the two dominant directions
+    3. Then calculate the maximum spread of the points along these two directions(width and length).
     思路：
         1. 取箱顶三维点；
         2. 中心化；
@@ -100,7 +98,8 @@ def estimate_length_width_pca(PC, box_top_mask):
         4. 投影到主方向；
         5. 投影范围作为长宽。
 
-    相比 x/y 范围法，该方法对旋转更鲁棒。
+    Advantage:
+        Estimate the true dimensions of an object regardless of its orientation by aligning the measurement axes with the object's principal directions of spread rather than the fixed image coordinates.
     """
 
     points = get_box_top_points(PC, box_top_mask)
@@ -137,14 +136,14 @@ def estimate_box_dimensions(
     method="pca",
 ):
     """
-    估计箱体的高度、长度和宽度。
+    estimate the height length and width
 
-    参数：
-        PC: H x W x 3 点云
-        floor_model: 地面平面模型 (normal, d)
-        box_model: 箱顶平面模型 (normal, d)
-        box_top_mask: 箱顶布尔掩码
-        method: 长宽估计方法，"pca" 或 "simple"
+    Parameters:：
+        PC: H x W x 3 point cloud
+        floor_model: (normal, d)
+        box_model: (normal, d)
+        box_top_mask:
+        method: "pca" or "simple"
 
     返回：
         height, length, width

@@ -197,46 +197,40 @@ def get_rectangle_from_mask(mask):
     返回：
         corners: 4 x 2 数组，每行是 [col, row]，可直接用于绘图
     """
-    # 1. 使用 ndimage.label 识别连通域
+    # 1. Using ndimage.label to get the largest connected component
     labeled_mask, num_features = label(mask)
-
-    # 2. 找到像素数量最多的区域（假设为盒子主体）
-    # bincount 计算每个 label 的像素数，[1:] 是为了排除背景 0
     region_counts = np.bincount(labeled_mask.ravel())
     main_label = np.argmax(region_counts[1:]) + 1
 
-    # 提取主体掩码
+    # Extract the main mask
     main_mask = (labeled_mask == main_label).astype(np.uint8)
-    # 2. 寻找轮廓 (Contours)
-    # 轮廓点包含了形状的所有边界信息
+    # 2. Looking for Contours
     contours, _ = cv2.findContours(main_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
         raise ValueError("No contours found.")
 
-    # 获取最大的轮廓
     cnt = max(contours, key=cv2.contourArea)
 
-    # 1. 计算轮廓周长，作为逼近精度的基准
+    # 1. Calculate contour perimeter to establish a baseline for approximation precision
+    # 'True' indicates the contour is a closed loop.
     peri = cv2.arcLength(cnt, True)
 
-    # 2. 进行多边形逼近
-    # eps 越小，逼近越精细，顶点越多；eps 越大，形状越简化。
-    # 这里的 0.02 是一个常用的经验值（周长的 2%），你可以根据实际情况微调
+    # 2. Perform polygon approximation
+    # 'eps' (epsilon) is the maximum distance between the original curve and its approximation.
     eps = 0.02 * peri
     approx = cv2.approxPolyDP(cnt, eps, True)
 
-    # 挤压维度，从 (N, 1, 2) 变为 (N, 2)
+    # Reshape (N, 1, 2) to (N, 2)
     approx = approx.squeeze()
 
-    # 3. 如果不幸逼近出了超过 4 个点，需要筛选出最像四边形的 4 个角
+    # 3. Handle cases where the approximation produces more than 4 vertices (complex shapes)
     if len(approx) > 4:
-        # 策略：寻找凸包，或者取面积最大的四边形组合。
-        # 这里使用凸包简化，然后取最偏离中心的四个点，或再次加大 eps 强行逼近
+        # Use a Convex Hull to eliminate concave noise and simplify the external shape
         hull = cv2.convexHull(cnt).squeeze()
-        # 再次尝试用更粗的 eps 逼近凸包
+        # Re-run approximation on the hull with a stricter tolerance (4%) to force a 4-corner result
         approx = cv2.approxPolyDP(hull, 0.04 * cv2.arcLength(hull, True), True).squeeze()
 
-    # 4. 如果逼近结果仍不是 4 个点（可能是 3 个或 5+），作为兜底，回退到 minAreaRect
+    # 4. If the approximation less than 4，Reuse minAreaRect() to find the minimum area rectangle.
     if len(approx) != 4:
         rect = cv2.minAreaRect(cnt)
         corners = cv2.boxPoints(rect)

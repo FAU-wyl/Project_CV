@@ -1,9 +1,9 @@
 # Box Detection and Size Estimation (Classical Vision + Point Cloud)
 
-This project processes depth camera data stored in MATLAB `.mat` files (intensity images, distance maps, and point clouds) to detect and estimate the sizes of rectangular boxes.
+This project processes depth camera data stored in `.mat` files (Amplitude images, Distance images, and Point clouds) to detect and estimate the sizes of rectangular boxes.
 
 Key features:
-- Ground plane detection (RANSAC)
+- Floor plane detection (RANSAC)
 - Box-top plane detection (RANSAC)
 - Box height, length and width estimation
 - 2D/3D visualization of results
@@ -74,7 +74,7 @@ From the web UI you can:
 
 ## 5. Adjustable parameters
 
-The Streamlit UI exposes several parameters that control detection and post-processing. Typical tunables include:
+The Streamlit UI exposes several parameters that control detection and post-processing. Typical parameters include:
 
 - `Floor threshold`: Distance threshold for inliers when fitting the ground plane
 - `Box top threshold`: Distance threshold for inliers when fitting the box top plane
@@ -97,6 +97,25 @@ The pipeline produces:
 - 2D segmentation overlays and oriented labels (`top`, `bottom`, `left`, `right`)
 
 ---
+
+---
+
+## Advantages and limitations
+
+This section summarizes the main pros and cons of the methods used in this project so you can better understand when the pipeline performs well and where it may fail.
+
+
+- RANSAC plane fitting (ground and box-top detection)
+  - Advantages: robust to a substantial fraction of outliers; easy to implement and tune for planar surfaces.
+  - Limitations: detection quality depends on thresholds and iteration count; can be slow if many iterations are needed; may fail for very small or highly fragmented planes.
+
+- PCA-based length/width estimation (top cloud)
+  - Advantages: simple, fast, and provides a principal orientation for the box top; works well when the top is mostly planar and dense.
+  - Limitations: sensitive to outliers and missing regions; assumes the top surface approximates a planar, rectangular shape.
+
+- Mask construction and morphological cleanup
+  - Advantages: removes small noisy components and small holes, producing cleaner segments for downstream processing.
+  - Limitations: aggressive parameters may remove thin legitimate parts or overfill true holes; requires parameter tuning per dataset.
 
 ## 7. Troubleshooting and common issues
 
