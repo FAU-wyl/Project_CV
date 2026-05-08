@@ -1,6 +1,15 @@
 # Box Detection and Size Estimation (Classical Vision + Point Cloud)
 
 This project processes depth camera data stored in `.mat` files (Amplitude images, Distance images, and Point clouds) to detect and estimate the sizes of rectangular boxes.
+Main steps include:
+1. Extracting valid points from the point cloud based on the distance image.
+2. Detecting the floor plane using RANSAC and creating a floor mask.
+3. Detecting the box-top plane using RANSAC and creating a box-top mask.
+4. Using morphological operations to improve the quality of the masks.
+4. Finding the Top Plane of the box.
+5. Measuring the Dimensions of the Box.
+
+Additionally, we provide a Web UI for interactive parameter tuning and visualization of results.
 
 Key features:
 - Floor plane detection (RANSAC)
