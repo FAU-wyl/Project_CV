@@ -172,8 +172,8 @@ with st.sidebar:
     uploaded = None
 
     if source == "Use local data file":
-        if os.path.exists("data"):
-            mat_files = list_mat_files("data")
+        if os.path.exists("../data"):
+            mat_files = list_mat_files("../data")
         else:
             mat_files = []
         if not mat_files:

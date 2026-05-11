@@ -82,4 +82,4 @@ def read_all_mat_files(data_dir="data"):
 
 
 if __name__ == "__main__":
-    read_all_mat_files("data")
+    read_all_mat_files("../data")
